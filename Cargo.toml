@@ -1,0 +1,9 @@
+[package]
+name = "io_bluetooth"
+version = "0.1.0"
+authors = ["Remco"]
+edition = "2018"
+
+[dependencies]
+cfg-if = "0.1"
+winapi = { path = "../winapi", features = ["impl-default", "bthdef", "guiddef", "winerror", "winnt", "winsock2", "ws2bth", "ws2def"] }
