@@ -1,8 +1,9 @@
 extern crate io_bluetooth;
 
-use std::io::{self, Read};
+use std::io;
+use std::iter;
 
-use io_bluetooth::{bt, BtProtocol};
+use io_bluetooth::bt;
 
 fn main() -> io::Result<()> {
     let devices = bt::discover_devices()?;
@@ -20,22 +21,21 @@ fn main() -> io::Result<()> {
 
     let device_idx = request_device_idx(devices.len())?;
 
-    let mut socket = bt::BtSocket::new(BtProtocol::RFCOMM)?;
-    socket.connect(devices[device_idx].clone())?;
+    let socket = bt::BtSocket::connect(iter::once(&devices[device_idx]), bt::BtProtocol::RFCOMM)?;
 
-    match socket.peername() {
+    match socket.peer_addr() {
         Ok(name) => println!("Peername: {}.", name.to_string()),
         Err(err) => println!("An error occured while retrieving the peername: {:?}", err),
     }
 
-    match socket.sockname() {
+    match socket.local_addr() {
         Ok(name) => println!("Socket name: {}", name.to_string()),
         Err(err) => println!("An error occured while retrieving the sockname: {:?}", err),
     }
 
     let mut buffer = vec![0; 1024];
     loop {
-        match socket.read(&mut buffer[..]) {
+        match socket.recv(&mut buffer[..]) {
             Ok(len) => println!("Received {} bytes.", len),
             Err(err) => return Err(err),
         }

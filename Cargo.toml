@@ -8,4 +8,4 @@ edition = "2018"
 cfg-if = "0.1"
 libbluetooth = { path = "../libbluetooth", features = ["impl-default"] }
 libc = "0.2"
-winapi = { path = "../winapi", features = ["impl-default", "bthdef", "guiddef", "winerror", "winnt", "winsock2", "ws2bth", "ws2def"] }
+winapi = { path = "../winapi", features = ["impl-default", "bthdef", "guiddef", "handleapi", "processthreadsapi", "winbase", "winerror", "winnt", "winsock2", "ws2bth", "ws2def"] }
