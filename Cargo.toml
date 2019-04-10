@@ -1,7 +1,10 @@
 [package]
 name = "io_bluetooth"
 version = "0.1.0"
-authors = ["Remco"]
+authors = ["Remco Kuijper <remco.kuijper@gmail.com>"]
+license = "MIT/Apache-2.0"
+repository = "https://github.com/Wodann/io-bluetooth-rs/"
+description = "A cross-platform library for Bluetooth"
 edition = "2018"
 
 [dependencies]
