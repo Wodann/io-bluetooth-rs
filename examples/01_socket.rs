@@ -3,7 +3,7 @@ extern crate io_bluetooth;
 use std::io;
 use std::iter;
 
-use io_bluetooth::bt;
+use io_bluetooth::bt::{self, BtStream};
 
 fn main() -> io::Result<()> {
     let devices = bt::discover_devices()?;
@@ -21,7 +21,7 @@ fn main() -> io::Result<()> {
 
     let device_idx = request_device_idx(devices.len())?;
 
-    let socket = bt::BtSocket::connect(iter::once(&devices[device_idx]), bt::BtProtocol::RFCOMM)?;
+    let socket = BtStream::connect(iter::once(&devices[device_idx]), bt::BtProtocol::RFCOMM)?;
 
     match socket.peer_addr() {
         Ok(name) => println!("Peername: {}.", name.to_string()),

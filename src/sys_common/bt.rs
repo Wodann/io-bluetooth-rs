@@ -71,19 +71,38 @@ where
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// Bluetooth
+// Bluetooth listeners
 ////////////////////////////////////////////////////////////////////////////////
 
-pub struct BtSocket {
+pub struct BtListener {
     inner: Socket,
     protocol: BtProtocol,
 }
 
-impl BtSocket {
-    pub fn accept(&self) -> io::Result<(BtSocket, BtAddr)> {
+impl BtListener {
+    pub fn bind(addr: &BtAddr, protocol: BtProtocol) -> io::Result<Self> {
+        let socket = Socket::new(protocol)?;
+
+        // On platforms with Berkeley-derived sockets, this allows
+        // to quickly rebind a socket, without needing to wait for
+        // the OS to clean up the previous one.
+        if !cfg!(windows) {
+            setsockopt(&socket, c::SOL_SOCKET, c::SO_REUSEADDR, 1 as c_int)?;
+        }
+
+        let (addr, len) = addr.into();
+        cvt(unsafe { c::bind(*socket.as_inner(), &addr as *const _ as *const _, len) })?;
+        cvt(unsafe { c::listen(*socket.as_inner(), 128) })?;
+        Ok(Self {
+            inner: socket,
+            protocol,
+        })
+    }
+
+    pub fn accept(&self) -> io::Result<(BtStream, BtAddr)> {
         self.inner.accept().map(|(socket, addr)| {
             (
-                BtSocket {
+                BtStream {
                     inner: socket,
                     protocol: self.protocol,
                 },
@@ -92,23 +111,80 @@ impl BtSocket {
         })
     }
 
-    pub fn bind(addr: &BtAddr, protocol: BtProtocol) -> io::Result<BtSocket> {
+    pub fn set_nonblocking(&self, nonblocking: bool) -> io::Result<()> {
+        self.inner.set_nonblocking(nonblocking)
+    }
+
+    pub fn local_addr(&self) -> io::Result<BtAddr> {
+        sockname(|addr, len| unsafe { c::getsockname(*self.inner.as_inner(), addr as *mut _, len) })
+    }
+
+    pub fn take_error(&self) -> io::Result<Option<io::Error>> {
+        self.inner.take_error()
+    }
+
+    pub fn protocol(&self) -> BtProtocol {
+        self.protocol
+    }
+
+    pub fn socket(&self) -> &Socket {
+        &self.inner
+    }
+
+    pub fn into_socket(self) -> Socket {
+        self.inner
+    }
+
+    pub fn duplicate(&self) -> io::Result<Self> {
+        self.inner.duplicate().map(|s| Self {
+            inner: s,
+            protocol: self.protocol,
+        })
+    }
+}
+
+impl fmt::Debug for BtListener {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut res = f.debug_struct("BtListener");
+
+        if let Ok(addr) = self.local_addr() {
+            res.field("addr", &addr);
+        }
+
+        let name = if cfg!(windows) { "socket" } else { "fd" };
+        res.field(name, &self.inner.as_inner()).finish()
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Bluetooth streams
+////////////////////////////////////////////////////////////////////////////////
+
+pub struct BtStream {
+    inner: Socket,
+    protocol: BtProtocol,
+}
+
+impl BtStream {
+    pub fn connect(addr: &BtAddr, protocol: BtProtocol) -> io::Result<Self> {
         let (addr, len) = addr.into();
 
         let socket = Socket::new(protocol)?;
-        cvt(unsafe { c::bind(*socket.as_inner(), &addr as *const _ as *const _, len) })?;
-        Ok(BtSocket {
+        cvt_r(|| unsafe { c::connect(*socket.as_inner(), &addr as *const _ as *const _, len) })?;
+        Ok(Self {
             inner: socket,
             protocol,
         })
     }
 
-    pub fn connect(addr: &BtAddr, protocol: BtProtocol) -> io::Result<BtSocket> {
-        let (addr, len) = addr.into();
-
+    pub fn connect_timeout(
+        addr: &BtAddr,
+        protocol: BtProtocol,
+        timeout: Duration,
+    ) -> io::Result<Self> {
         let socket = Socket::new(protocol)?;
-        cvt_r(|| unsafe { c::connect(*socket.as_inner(), &addr as *const _ as *const _, len) })?;
-        Ok(BtSocket {
+        socket.connect_timeout(addr, timeout)?;
+        Ok(Self {
             inner: socket,
             protocol,
         })
@@ -189,6 +265,10 @@ impl BtSocket {
         sockname(|addr, len| unsafe { c::getpeername(*self.inner.as_inner(), addr as *mut _, len) })
     }
 
+    pub fn take_error(&self) -> io::Result<Option<io::Error>> {
+        self.inner.take_error()
+    }
+
     pub fn protocol(&self) -> BtProtocol {
         self.protocol
     }
@@ -201,21 +281,17 @@ impl BtSocket {
         self.inner
     }
 
-    pub fn take_error(&self) -> io::Result<Option<io::Error>> {
-        self.inner.take_error()
-    }
-
-    pub fn duplicate(&self) -> io::Result<BtSocket> {
-        self.inner.duplicate().map(|s| BtSocket {
+    pub fn duplicate(&self) -> io::Result<Self> {
+        self.inner.duplicate().map(|s| Self {
             inner: s,
             protocol: self.protocol,
         })
     }
 }
 
-impl fmt::Debug for BtSocket {
+impl fmt::Debug for BtStream {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut res = f.debug_struct("BtSocket");
+        let mut res = f.debug_struct("BtStream");
 
         if let Ok(addr) = self.local_addr() {
             res.field("addr", &addr);

@@ -106,7 +106,7 @@ impl Socket {
         Ok((Socket(fd), BtAddr(addr.rc_bdaddr.b)))
     }
 
-    pub fn connect_timeout(&self, addr: BtAddr, timeout: Duration) -> io::Result<()> {
+    pub fn connect_timeout(&self, addr: &BtAddr, timeout: Duration) -> io::Result<()> {
         self.set_nonblocking(true)?;
         let r = {
             let addr = libbt::sockaddr_rc {
