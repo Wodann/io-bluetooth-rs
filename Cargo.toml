@@ -3,8 +3,10 @@ name = "io_bluetooth"
 version = "0.1.0"
 authors = ["Remco Kuijper <remco.kuijper@gmail.com>"]
 license = "MIT/Apache-2.0"
-repository = "https://github.com/Wodann/io-bluetooth-rs/"
 description = "A cross-platform library for Bluetooth"
+repository = "https://github.com/Wodann/io-bluetooth-rs/"
+readme = "README.md"
+include = ["Cargo.toml, src/**/*.rs", "README.md", "LICENSE-APACHE", "LICENSE-MIT"]
 edition = "2018"
 
 [dependencies]
