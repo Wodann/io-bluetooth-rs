@@ -84,7 +84,12 @@ impl Socket {
         init();
 
         let protocol = match protocol {
-            BtProtocol::L2CAP => c::BTHPROTO_L2CAP,
+            BtProtocol::L2CAP => {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "L2CAP is currently not supported on Windows",
+                ))
+            } //c::BTHPROTO_L2CAP,
             BtProtocol::RFCOMM => c::BTHPROTO_RFCOMM,
         };
         let socket = unsafe {
