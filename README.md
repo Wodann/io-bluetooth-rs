@@ -11,6 +11,8 @@ Add the following to your `cargo.toml`:
 io_bluetooth = "0.1"
 ```
 
+Examples of how to use the IO Bluetooth API are provided [here](examples/).
+
 ## No-std support
 
 This crate currently requires the Rust standard library.
