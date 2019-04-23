@@ -19,4 +19,5 @@ libbluetooth = { version = "0.1", features = ["impl-default"] }
 libc = "0.2"
 
 [target.'cfg(windows)'.dependencies]
-winapi = { path = "../winapi", features = ["impl-default", "bthdef", "guiddef", "handleapi", "processthreadsapi", "winbase", "winerror", "winnt", "winsock2", "ws2bth", "ws2def"] }
+winapi = { version = "0.3.7", features = ["impl-default", "guiddef", "handleapi", "processthreadsapi", "winbase", "winerror", "winnt", "winsock2", "ws2def"] }
+winbluetooth = { version = "0.1", features = ["impl-default"] }
