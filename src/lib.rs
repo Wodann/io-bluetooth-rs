@@ -8,6 +8,3 @@ pub mod bt;
 
 mod sys;
 mod sys_common;
-
-#[cfg(test)]
-mod tests;
