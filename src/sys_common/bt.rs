@@ -80,7 +80,7 @@ pub struct BtListener {
 }
 
 impl BtListener {
-    pub fn bind(addr: &BtAddr, protocol: BtProtocol) -> io::Result<Self> {
+    pub fn bind(addr: BtAddr, protocol: BtProtocol) -> io::Result<Self> {
         let socket = Socket::new(protocol)?;
 
         // On platforms with Berkeley-derived sockets, this allows
@@ -166,7 +166,7 @@ pub struct BtStream {
 }
 
 impl BtStream {
-    pub fn connect(addr: &BtAddr, protocol: BtProtocol) -> io::Result<Self> {
+    pub fn connect(addr: BtAddr, protocol: BtProtocol) -> io::Result<Self> {
         let (addr, len) = addr.into();
 
         let socket = Socket::new(protocol)?;
@@ -178,7 +178,7 @@ impl BtStream {
     }
 
     pub fn connect_timeout(
-        addr: &BtAddr,
+        addr: BtAddr,
         protocol: BtProtocol,
         timeout: Duration,
     ) -> io::Result<Self> {
@@ -218,7 +218,7 @@ impl BtStream {
         .map(|ret| ret as usize)
     }
 
-    pub fn send_to(&self, buf: &[u8], dst: &BtAddr) -> io::Result<usize> {
+    pub fn send_to(&self, buf: &[u8], dst: BtAddr) -> io::Result<usize> {
         let (addr, addrlen) = dst.into();
         cvt(unsafe {
             c::sendto(

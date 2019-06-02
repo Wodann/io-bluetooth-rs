@@ -21,7 +21,7 @@ fn main() -> io::Result<()> {
 
     let device_idx = request_device_idx(devices.len())?;
 
-    let socket = BtStream::connect(iter::once(&devices[device_idx]), bt::BtProtocol::RFCOMM)?;
+    let socket = BtStream::connect(iter::once(devices[device_idx]), bt::BtProtocol::RFCOMM)?;
 
     match socket.peer_addr() {
         Ok(name) => println!("Peername: {}.", name.to_string()),

@@ -101,9 +101,9 @@ impl BtListener {
     /// address) is returned.
     ///
     /// [`local_addr`]: #method.local_addr
-    pub fn bind<'a, I>(addrs: I, protocol: BtProtocol) -> io::Result<Self>
+    pub fn bind<I>(addrs: I, protocol: BtProtocol) -> io::Result<Self>
     where
-        I: Iterator<Item = &'a BtAddr>,
+        I: Iterator<Item = BtAddr>,
     {
         each_addr(addrs, |addr| bt_imp::BtListener::bind(addr, protocol)).map(BtListener)
     }
@@ -198,7 +198,7 @@ impl BtStream {
     /// on the port, rather, such an error would only be detected after the first send. If
     /// the OS returns an error for each of the specified addresses, the error returned
     /// from the last connection attempt (the last address) is returned.
-    pub fn connect<'a, I: Iterator<Item = &'a BtAddr>>(
+    pub fn connect<I: Iterator<Item = BtAddr>>(
         addrs: I,
         protocol: BtProtocol,
     ) -> io::Result<Self> {
@@ -218,7 +218,7 @@ impl BtStream {
     ///
     /// [`BtAddr`]: https://doc.rust-lang.org/std/net/enum.BtAddr.html
     pub fn connect_timeout(
-        addr: &BtAddr,
+        addr: BtAddr,
         protocol: BtProtocol,
         timeout: Duration,
     ) -> io::Result<Self> {
@@ -305,7 +305,7 @@ impl BtStream {
 
     /// Sends data on the socket to the given address. On success, returns the number of
     /// bytes written.
-    pub fn send_to(&self, buf: &[u8], dst: &BtAddr) -> io::Result<usize> {
+    pub fn send_to(&self, buf: &[u8], dst: BtAddr) -> io::Result<usize> {
         self.0.send_to(buf, dst)
     }
 
@@ -482,10 +482,10 @@ impl IntoInner<bt_imp::BtStream> for BtStream {
     }
 }
 
-fn each_addr<'a, I, F, T>(addrs: I, mut f: F) -> io::Result<T>
+fn each_addr<I, F, T>(addrs: I, mut f: F) -> io::Result<T>
 where
-    F: FnMut(&'a BtAddr) -> io::Result<T>,
-    I: Iterator<Item = &'a BtAddr>,
+    F: FnMut(BtAddr) -> io::Result<T>,
+    I: Iterator<Item = BtAddr>,
 {
     let mut last_err = None;
     for addr in addrs {

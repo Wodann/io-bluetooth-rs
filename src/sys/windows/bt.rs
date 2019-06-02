@@ -122,7 +122,7 @@ impl Socket {
         ))
     }
 
-    pub fn connect_timeout(&self, addr: &BtAddr, timeout: Duration) -> io::Result<()> {
+    pub fn connect_timeout(&self, addr: BtAddr, timeout: Duration) -> io::Result<()> {
         self.set_nonblocking(true)?;
         let r = {
             let addr = c::SOCKADDR_BTH {
@@ -428,7 +428,7 @@ fn protocol_guid(protocol: BtProtocol) -> c::GUID {
     }
 }
 
-impl<'a> Into<u64> for &'a BtAddr {
+impl Into<u64> for BtAddr {
     fn into(self) -> u64 {
         let sap = u32::from_le_bytes([self.0[0], self.0[1], self.0[2], self.0[3]]);
         let nap = u16::from_le_bytes([self.0[4], self.0[5]]);
@@ -443,7 +443,7 @@ impl<'a> Into<BtAddr> for &'a btc::sockaddr_storage {
     }
 }
 
-impl<'a> Into<(btc::sockaddr_storage, btc::socklen_t)> for &'a BtAddr {
+impl Into<(btc::sockaddr_storage, btc::socklen_t)> for BtAddr {
     fn into(self) -> (btc::sockaddr_storage, btc::socklen_t) {
         let mut addr = btc::sockaddr_storage {
             ss_family: c::AF_BTH,
