@@ -347,7 +347,7 @@ pub fn discover_devices() -> io::Result<Discover> {
 
     let mut inquiry_infos = vec![libbt::inquiry_info::default(); 256];
 
-    const TIMEOUT: c_int = 4; // 4 * 1.28 seconds
+    const TIMEOUT: c_int = 8; // 8 * 1.28 seconds
     let num_responses = unsafe {
         libbt::hci_inquiry(
             device_id,
