@@ -3,10 +3,10 @@ extern crate io_bluetooth;
 use std::io;
 use std::iter;
 
-use io_bluetooth::bt::{self, BtStream};
+use io_bluetooth::bt::{self, BtAddr, BtStream};
 
 fn main() -> io::Result<()> {
-    let devices = bt::discover_devices()?;
+    let devices = bt::discover_devices()?.collect::<io::Result<Vec<BtAddr>>>()?;
     println!("Devices:");
     for (idx, device) in devices.iter().enumerate() {
         println!("{}: {}", idx, *device);

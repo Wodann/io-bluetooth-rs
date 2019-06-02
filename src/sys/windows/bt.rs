@@ -356,68 +356,72 @@ impl IntoInner<c::SOCKET> for Socket {
     }
 }
 
-pub fn discover_devices() -> io::Result<Vec<BtAddr>> {
+pub struct Discover { handle: c::HANDLE }
+
+impl Iterator for Discover {
+    type Item = io::Result<BtAddr>;
+    fn next(&mut self) -> Option<io::Result<BtAddr>> {
+        let mut buffer: Vec<u8> = vec![0; mem::size_of::<c::WSAQUERYSETW>()];
+        loop {
+            let (query, mut len) = {
+                let slice = &mut buffer[..];
+                (
+                    slice.as_mut_ptr() as *mut c::WSAQUERYSETW,
+                    slice.len() as u32,
+                )
+            };
+
+            unsafe {
+                if 0 == c::WSALookupServiceNextW(
+                    self.handle,
+                    c::LUP_CONTAINERS | c::LUP_RETURN_ADDR,
+                    &mut len,
+                    query,
+                ) {
+                    let query: c::WSAQUERYSETW = *query;
+                    let addr_info: c::CSADDR_INFO = *query.lpcsaBuffer;
+                    let addr = *(addr_info.RemoteAddr.lpSockaddr as *mut c::SOCKADDR_BTH);
+                    return Some(Ok(BtAddr::nap_sap(
+                        c::GET_NAP(addr.btAddr),
+                        c::GET_SAP(addr.btAddr),
+                    )));
+                } else {
+                    let err = last_error();
+                    match err.raw_os_error().unwrap() as u32 {
+                        c::WSA_E_NO_MORE => break,
+                        c::WSAEFAULT => buffer.resize_with(len as usize, Default::default),
+                        _ => return Some(Err(err)),
+                    }
+                }
+            };
+        }
+
+        if 0 != unsafe { c::WSALookupServiceEnd(self.handle) } {
+            Some(Err(last_error()))
+        } else {
+            None
+        }
+    }
+}
+
+pub fn discover_devices() -> io::Result<Discover> {
     init();
 
-    let handle: c::HANDLE = {
-        let mut query: c::WSAQUERYSETW = Default::default();
-        query.dwSize = mem::size_of::<c::WSAQUERYSETW>() as u32;
-        query.dwNameSpace = c::NS_BTH;
+    let mut query: c::WSAQUERYSETW = Default::default();
+    query.dwSize = mem::size_of::<c::WSAQUERYSETW>() as u32;
+    query.dwNameSpace = c::NS_BTH;
 
-        let mut handle: c::HANDLE = std::ptr::null_mut();
-        if 0 != unsafe {
-            c::WSALookupServiceBeginW(
-                &mut query,
-                c::LUP_CONTAINERS | c::LUP_FLUSHCACHE,
-                &mut handle,
-            )
-        } {
-            Err(last_error())
-        } else {
-            Ok(handle)
-        }
-    }?;
-
-    let mut addresses = Vec::new();
-    let mut buffer: Vec<u8> = vec![0; mem::size_of::<c::WSAQUERYSETW>()];
-    loop {
-        let (query, mut len) = {
-            let slice = &mut buffer[..];
-            (
-                slice.as_mut_ptr() as *mut c::WSAQUERYSETW,
-                slice.len() as u32,
-            )
-        };
-
-        unsafe {
-            if 0 == c::WSALookupServiceNextW(
-                handle,
-                c::LUP_CONTAINERS | c::LUP_RETURN_ADDR,
-                &mut len,
-                query,
-            ) {
-                let query: c::WSAQUERYSETW = *query;
-                let addr_info: c::CSADDR_INFO = *query.lpcsaBuffer;
-                let addr = *(addr_info.RemoteAddr.lpSockaddr as *mut c::SOCKADDR_BTH);
-                addresses.push(BtAddr::nap_sap(
-                    c::GET_NAP(addr.btAddr),
-                    c::GET_SAP(addr.btAddr),
-                ));
-            } else {
-                let err = last_error();
-                match err.raw_os_error().unwrap() as u32 {
-                    c::WSA_E_NO_MORE => break,
-                    c::WSAEFAULT => buffer.resize_with(len as usize, Default::default),
-                    _ => return Err(err),
-                }
-            }
-        };
-    }
-
-    if 0 != unsafe { c::WSALookupServiceEnd(handle) } {
+    let mut handle: c::HANDLE = std::ptr::null_mut();
+    if 0 != unsafe {
+        c::WSALookupServiceBeginW(
+            &mut query,
+            c::LUP_CONTAINERS | c::LUP_FLUSHCACHE,
+            &mut handle,
+        )
+    } {
         Err(last_error())
     } else {
-        Ok(addresses)
+        Ok(Discover { handle })
     }
 }
 

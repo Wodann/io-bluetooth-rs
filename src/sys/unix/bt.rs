@@ -1,4 +1,4 @@
-use std::cmp;
+use std::{iter::Iterator, cmp};
 use std::io;
 use std::mem;
 use std::net::Shutdown;
@@ -106,7 +106,7 @@ impl Socket {
         Ok((Socket(fd), BtAddr(addr.rc_bdaddr.b)))
     }
 
-    pub fn connect_timeout(&self, addr: &BtAddr, timeout: Duration) -> io::Result<()> {
+    pub fn connect_timeout(&self, addr: BtAddr, timeout: Duration) -> io::Result<()> {
         self.set_nonblocking(true)?;
         let r = {
             let addr = libbt::sockaddr_rc {
@@ -159,7 +159,7 @@ impl Socket {
             let mut timeout = timeout
                 .as_secs()
                 .saturating_mul(1_000)
-                .saturating_add(timeout.subsec_nanos() as u64 / 1_000_000);
+                .saturating_add(u64::from(timeout.subsec_millis()));
             if timeout == 0 {
                 timeout = 1;
             }
@@ -252,7 +252,7 @@ impl Socket {
                 };
                 let mut timeout = libc::timeval {
                     tv_sec: secs,
-                    tv_usec: (dur.subsec_nanos() / 1_000) as libc::suseconds_t,
+                    tv_usec: libc::suseconds_t::from(dur.subsec_micros()),
                 };
                 if timeout.tv_sec == 0 && timeout.tv_usec == 0 {
                     timeout.tv_usec = 1;
@@ -325,7 +325,16 @@ impl IntoInner<c_int> for Socket {
     }
 }
 
-pub fn discover_devices() -> io::Result<Vec<BtAddr>> {
+pub struct Discover { inner: Box<Iterator<Item = io::Result<BtAddr>>> }
+
+impl Iterator for Discover {
+    type Item = io::Result<BtAddr>;
+    fn next(&mut self) -> Option<io::Result<BtAddr>> {
+        self.inner.next()
+    }
+}
+
+pub fn discover_devices() -> io::Result<Discover> {
     let device_id = unsafe { libbt::hci_get_route(ptr::null_mut()) };
     if device_id == -1 {
         return Err(io::Error::last_os_error());
@@ -354,12 +363,12 @@ pub fn discover_devices() -> io::Result<Vec<BtAddr>> {
     }
 
     inquiry_infos.truncate(num_responses as usize);
-    let devices = inquiry_infos.iter().map(|ii| BtAddr(ii.bdaddr.b)).collect();
+    let devices: Vec<io::Result<BtAddr>> = inquiry_infos.iter().map(|ii| Ok(BtAddr(ii.bdaddr.b))).collect();
 
     if -1 == unsafe { libbt::hci_close_dev(local_socket) } {
         Err(io::Error::last_os_error())
     } else {
-        Ok(devices)
+        Ok(Discover { inner: Box::new(devices.into_iter()) })
     }
 }
 
@@ -370,7 +379,7 @@ impl<'a> Into<BtAddr> for &'a btc::sockaddr_storage {
     }
 }
 
-impl<'a> Into<(btc::sockaddr_storage, btc::socklen_t)> for &'a BtAddr {
+impl Into<(btc::sockaddr_storage, btc::socklen_t)> for BtAddr {
     fn into(self) -> (btc::sockaddr_storage, btc::socklen_t) {
         let mut addr: btc::sockaddr_storage = unsafe { mem::zeroed() };
 

@@ -44,6 +44,7 @@ pub enum BtProtocol {
     RFCOMM,
 }
 
+pub use crate::sys::bt::Discover;
 pub use crate::sys::bt::discover_devices;
 
 /// A Bluetooth socket server, listening for connections.
