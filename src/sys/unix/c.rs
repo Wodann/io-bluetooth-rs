@@ -1,8 +1,6 @@
 pub use libbluetooth::{
-    bluetooth::{bdaddr_t, BTPROTO_L2CAP, BTPROTO_RFCOMM},
-    hci::{inquiry_info, IREQ_CACHE_FLUSH},
-    hci_lib::{hci_close_dev, hci_get_route, hci_inquiry, hci_open_dev},
-    rfcomm::sockaddr_rc,
+    bdaddr_t, hci_close_dev, hci_get_route, hci_inquiry, hci_open_dev, inquiry_info, sockaddr_rc,
+    BTPROTO_L2CAP, BTPROTO_RFCOMM, IREQ_CACHE_FLUSH,
 };
 pub use libc::{
     accept, bind, connect, getpeername, getsockname, shutdown, sockaddr, socket, socklen_t,

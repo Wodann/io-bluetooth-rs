@@ -7,10 +7,10 @@ use std::ptr;
 use std::time::{Duration, Instant};
 
 mod libbt {
-    pub use libbluetooth::bluetooth::{bdaddr_t, BTPROTO_L2CAP, BTPROTO_RFCOMM};
-    pub use libbluetooth::hci::{inquiry_info, IREQ_CACHE_FLUSH};
-    pub use libbluetooth::hci_lib::{hci_close_dev, hci_get_route, hci_inquiry, hci_open_dev};
-    pub use libbluetooth::rfcomm::sockaddr_rc;
+    pub use libbluetooth::{
+        bdaddr_t, hci_close_dev, hci_get_route, hci_inquiry, hci_open_dev, inquiry_info,
+        sockaddr_rc, BTPROTO_L2CAP, BTPROTO_RFCOMM, IREQ_CACHE_FLUSH,
+    };
 }
 
 use libc;
@@ -42,7 +42,7 @@ impl Socket {
         let protocol = match protocol {
             BtProtocol::L2CAP => libbt::BTPROTO_L2CAP,
             BtProtocol::RFCOMM => libbt::BTPROTO_RFCOMM,
-        };
+        } as i32;
 
         // On linux we first attempt to pass the SOCK_CLOEXEC flag to
         // atomically create the socket and set it as CLOEXEC. Support for
@@ -346,7 +346,7 @@ pub fn discover_devices() -> io::Result<Vec<BtAddr>> {
             inquiry_infos.len() as c_int,
             ptr::null(),
             &mut inquiry_infos.as_mut_ptr(),
-            libbt::IREQ_CACHE_FLUSH,
+            libbt::IREQ_CACHE_FLUSH as libc::c_long,
         )
     };
     if num_responses == -1 {
