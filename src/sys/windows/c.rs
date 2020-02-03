@@ -14,9 +14,9 @@ pub use winapi::um::winsock2::{
     SOCKET_ERROR, SOCK_STREAM, SOL_SOCKET, SO_ERROR, SO_RCVTIMEO, SO_REUSEADDR, SO_SNDTIMEO,
     WSADATA, WSAESHUTDOWN, WSAPROTOCOL_INFOW, WSAQUERYSETW, WSA_FLAG_OVERLAPPED,
 };
-pub use winbluetooth::shared::bthdef::{
+pub use winapi::shared::bthdef::{
     GET_NAP, GET_SAP, L2CAP_PROTOCOL_UUID, RFCOMM_PROTOCOL_UUID, SET_NAP_SAP,
 };
-pub use winbluetooth::um::ws2bth::{
+pub use winapi::um::ws2bth::{
     AF_BTH, BTHPROTO_L2CAP, BTHPROTO_RFCOMM, BT_PORT_ANY, SOCKADDR_BTH,
 };
