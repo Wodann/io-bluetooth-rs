@@ -8,7 +8,7 @@ Add the following to your `cargo.toml`:
 
 ```toml
 [dependencies]
-io_bluetooth = "0.1"
+io_bluetooth = "0.2"
 ```
 
 Examples of how to use the IO Bluetooth API are provided [here](examples/).
