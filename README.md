@@ -2,6 +2,17 @@
 
 **IO Bluetooth is a Rust library that provides cross-platform support for Bluetooth communication.**
 
+[![Build Status](https://github.com/wodann/io-bluetooth-rs/workflows/CI/badge.svg?branch=master)](https://github.com/wodann/io-bluetooth-rs/actions)
+[![Documentation][docs-badge]][docs-url]
+[![MIT OR Apache license][license-badge]][license-url]
+![Lines of Code][loc-url]
+
+[docs-badge]: https://img.shields.io/badge/docs-website-blue.svg
+[docs-url]: https://docs.rs/io_bluetooth
+[license-badge]: https://img.shields.io/crates/l/io_bluetooth
+[license-url]: README.md
+[loc-url]: https://tokei.rs/b1/github/wodann/io-bluetooth-rs?category=code
+
 ## Usage
 
 Add the following to your `cargo.toml`:
