@@ -1,6 +1,6 @@
 use std::cmp;
 use std::io;
-use std::mem;
+use std::mem::{self, MaybeUninit};
 use std::net::Shutdown;
 use std::os::raw::{c_char, c_int, c_long, c_ulong};
 use std::ptr;
@@ -110,17 +110,18 @@ impl Socket {
     }
 
     pub fn accept(&self) -> io::Result<(Socket, BtAddr)> {
-        let mut addr = c::SOCKADDR_BTH::default();
+        let mut addr_storage = c::SOCKADDR_STORAGE_LH::default();
         let mut len = mem::size_of::<c::SOCKADDR_BTH>() as c_int;
 
         let socket = unsafe {
-            match c::accept(self.0, &mut addr as *mut _ as *mut _, &mut len) {
+            match c::accept(self.0, &mut addr_storage as *mut _ as *mut _, &mut len) {
                 c::INVALID_SOCKET => Err(last_error()),
                 n => Ok(Socket(n)),
             }
         }?;
         socket.set_no_inherit()?;
 
+        let addr = unsafe { &*(&addr_storage as *const _ as *const c::SOCKADDR_BTH) };
         Ok((
             socket,
             BtAddr::nap_sap(c::GET_NAP(addr.btAddr), c::GET_SAP(addr.btAddr)),
@@ -130,17 +131,27 @@ impl Socket {
     pub fn connect_timeout(&self, addr: &BtAddr, timeout: Duration) -> io::Result<()> {
         self.set_nonblocking(true)?;
         let r = {
-            let addr = c::SOCKADDR_BTH {
-                addressFamily: c::AF_BTH,
-                btAddr: addr.into(),
-                // serviceClassId: protocol_guid(self.protocol),
-                ..Default::default()
+            let addr = {
+                fn init_bt_addr(storage: *mut c::SOCKADDR_STORAGE_LH, addr: &BtAddr) {
+                    let storage = storage as *mut c::SOCKADDR_BTH;
+                    unsafe {
+                        *storage = c::SOCKADDR_BTH {
+                            addressFamily: c::AF_BTH,
+                            btAddr: addr.into(),
+                            // serviceClassId: protocol_guid(self.protocol),
+                            ..Default::default()
+                        };
+                    }
+                }
+                let mut storage = MaybeUninit::<c::SOCKADDR_STORAGE_LH>::uninit();
+                init_bt_addr(storage.as_mut_ptr(), addr);
+                unsafe { storage.assume_init() }
             };
 
             cvt(unsafe {
                 c::connect(
                     self.0,
-                    &addr as *const c::SOCKADDR_BTH as *const c::SOCKADDR,
+                    &addr as *const _ as *const c::SOCKADDR,
                     mem::size_of::<c::SOCKADDR_BTH>() as i32,
                 )
             })
@@ -162,7 +173,7 @@ impl Socket {
 
         let timeout = {
             let tv_sec = timeout.as_secs() as c_long;
-            let mut tv_usec = (timeout.subsec_nanos() / 1000) as c_long;
+            let mut tv_usec = (timeout.subsec_micros()) as c_long;
             if tv_sec == 0 && tv_usec == 0 {
                 tv_usec = 1;
             }
@@ -229,7 +240,7 @@ impl Socket {
     }
 
     fn recv_from_with_flags(&self, buf: &mut [u8], flags: c_int) -> io::Result<(usize, BtAddr)> {
-        let mut addr = c::SOCKADDR_BTH::default();
+        let mut addr_storage = c::SOCKADDR_STORAGE_LH::default();
         let mut addrlen = mem::size_of::<c::SOCKADDR_BTH>() as c_int;
         let len = cmp::min(buf.len(), <c_int>::max_value() as usize) as c_int;
 
@@ -239,19 +250,25 @@ impl Socket {
                 buf.as_mut_ptr() as *mut c_char,
                 len,
                 flags,
-                &mut addr as *mut _ as *mut _,
+                &mut addr_storage as *mut _ as *mut _,
                 &mut addrlen,
             )
         } {
-            -1 if unsafe { c::WSAGetLastError() } == c::WSAESHUTDOWN => Ok((
-                0,
-                BtAddr::nap_sap(c::GET_NAP(addr.btAddr), c::GET_SAP(addr.btAddr)),
-            )),
+            -1 if unsafe { c::WSAGetLastError() } == c::WSAESHUTDOWN => {
+                let addr = unsafe { &*(&addr_storage as *const _ as *const c::SOCKADDR_BTH) };
+                Ok((
+                    0,
+                    BtAddr::nap_sap(c::GET_NAP(addr.btAddr), c::GET_SAP(addr.btAddr)),
+                ))
+            }
             -1 => Err(last_error()),
-            n => Ok((
-                n as usize,
-                BtAddr::nap_sap(c::GET_NAP(addr.btAddr), c::GET_SAP(addr.btAddr)),
-            )),
+            n => {
+                let addr = unsafe { &*(&addr_storage as *const _ as *const c::SOCKADDR_BTH) };
+                Ok((
+                    n as usize,
+                    BtAddr::nap_sap(c::GET_NAP(addr.btAddr), c::GET_SAP(addr.btAddr)),
+                ))
+            }
         }
     }
 
@@ -383,14 +400,17 @@ pub fn discover_devices() -> io::Result<Vec<BtAddr>> {
         }
     }?;
 
+    // Use `usize` to guarantee matching alignment with `WSAQUERYSETW`
+    let mut buffer: Vec<usize> =
+        vec![0; mem::size_of::<c::WSAQUERYSETW>() / mem::size_of::<usize>()];
+
     let mut addresses = Vec::new();
-    let mut buffer: Vec<u8> = vec![0; mem::size_of::<c::WSAQUERYSETW>()];
     loop {
         let (query, mut len) = {
             let slice = &mut buffer[..];
             (
                 slice.as_mut_ptr() as *mut c::WSAQUERYSETW,
-                slice.len() as u32,
+                (slice.len() * mem::size_of::<usize>()) as u32,
             )
         };
 
@@ -412,7 +432,10 @@ pub fn discover_devices() -> io::Result<Vec<BtAddr>> {
                 let err = last_error();
                 match err.raw_os_error().unwrap() as u32 {
                     c::WSA_E_NO_MORE => break,
-                    c::WSAEFAULT => buffer.resize_with(len as usize, Default::default),
+                    c::WSAEFAULT => buffer.resize_with(
+                        1 + (len as usize) / mem::size_of::<usize>(),
+                        Default::default,
+                    ),
                     _ => return Err(err),
                 }
             }

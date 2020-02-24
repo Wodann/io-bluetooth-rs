@@ -1,0 +1,51 @@
+name: CI
+
+on: [pull_request, push]
+
+jobs:
+  test:
+    name: Test
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+        - { os: "ubuntu-latest", target: "i686-unknown-linux-gnu", toolchain: "stable"}
+        - { os: "ubuntu-latest", target: "x86_64-unknown-linux-gnu", toolchain: "stable"}
+        - { os: "ubuntu-latest", target: "x86_64-unknown-linux-gnu", toolchain: "beta"}
+        - { os: "ubuntu-latest", target: "x86_64-unknown-linux-gnu", toolchain: "nightly"}
+        - { os: "windows-2016", target: "i686-pc-windows-msvc", toolchain: "stable"}
+        - { os: "windows-2016", target: "x86_64-pc-windows-msvc", toolchain: "stable"}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install ${{ matrix.config.toolchain }} toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.config.toolchain }}
+          target: ${{ matrix.config.target }}
+          override: true
+          components: clippy, rustfmt
+
+      - name: Install libbluetooth-dev (Linux only)
+        if: runner.os == 'Linux'
+        run: sudo apt-get install libbluetooth-dev
+
+      - name: Run cargo test
+        uses: actions-rs/cargo@v1
+        continue-on-error: ${{ matrix.config.toolchain == 'nightly' }}
+        with:
+          command: test
+
+      - name: Run cargo fmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+      - name: Run cargo clippy
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-features
