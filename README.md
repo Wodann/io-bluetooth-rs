@@ -2,7 +2,7 @@
 
 **IO Bluetooth is a Rust library that provides cross-platform support for Bluetooth communication.**
 
-[![Build Status](https://github.com/wodann/io-bluetooth-rs/workflows/CI/badge.svg?branch=master)](https://github.com/wodann/io-bluetooth-rs/actions)
+[![Build Status](https://github.com/Wodann/io-bluetooth-rs/workflows/CI/badge.svg?branch=master)](https://github.com/wodann/io-bluetooth-rs/actions)
 [![Documentation][docs-badge]][docs-url]
 [![MIT OR Apache license][license-badge]][license-url]
 ![Lines of Code][loc-url]
