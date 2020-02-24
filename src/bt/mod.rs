@@ -7,7 +7,7 @@ use crate::sys_common::bt as bt_imp;
 use crate::sys_common::{AsInner, FromInner, IntoInner};
 
 /// A Bluetooth address, consisting of 6 bytes.
-#[derive(Clone)]
+#[derive(Clone, Copy, Eq, PartialEq, Hash, PartialOrd, Ord)]
 pub struct BtAddr(pub [u8; 6]);
 
 impl BtAddr {

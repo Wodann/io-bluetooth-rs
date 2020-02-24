@@ -1,7 +1,7 @@
 use std::cmp;
 use std::io;
 use std::mem::{self, MaybeUninit};
-use std::net::Shutdown;
+use std::net::{self, Shutdown};
 use std::os::raw::{c_char, c_int, c_long, c_ulong};
 use std::ptr;
 use std::sync::Once;
@@ -23,19 +23,14 @@ pub mod btc {
 
 pub struct Socket(c::SOCKET);
 
-/// Checks whether the Windows socket interface has been started already, and
-/// if not, starts it.
-/// TODO: Does not account for c::WSACleanup()
 fn init() {
     static START: Once = Once::new();
 
-    START.call_once(|| unsafe {
-        let mut data: c::WSADATA = mem::zeroed();
-        let ret = c::WSAStartup(
-            0x202, // version 2.2
-            &mut data,
-        );
-        assert_eq!(ret, 0);
+    START.call_once(|| {
+        // Initialize winsock through the standard library by just creating a
+        // dummy socket. Whether this is successful or not we drop the result as
+        // libstd will be sure to have initialized winsock.
+        let _ = net::UdpSocket::bind("127.0.0.1:34254");
     });
 }
 
