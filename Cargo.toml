@@ -15,7 +15,7 @@ edition = "2018"
 cfg-if = "0.1"
 
 [target.'cfg(unix)'.dependencies]
-libbluetooth = { version = "0.1", features = ["impl-default"] }
+libbluetooth = { git = "https://github.com/wodann/libbluetooth-rs.git", branch = "feature/bindgen" }
 libc = "0.2"
 
 [target.'cfg(windows)'.dependencies]
